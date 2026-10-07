@@ -59,6 +59,20 @@ HOURLY = ("temperature_2m,dew_point_2m,relative_humidity_2m,wind_speed_10m,wind_
           "boundary_layer_height,pressure_msl,surface_pressure," + _PL)
 
 
+def _download(url, tries=5):
+    """GET con reintentos: desde un runner compartido los timeouts de red son esporádicos."""
+    import time
+    for n in range(1, tries + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r:
+                return r.read()
+        except Exception as e:
+            if n == tries:
+                raise
+            print(f"  reintento {n}/{tries - 1} tras error: {e}")
+            time.sleep(6 * n)
+
+
 def fetch():
     DATA.mkdir(exist_ok=True)
     for mkey, mid, *_ in MODELS:
@@ -68,8 +82,7 @@ def fetch():
                 "forecast_days": 3, "models": mid,
                 "daily": "temperature_2m_max,sunrise,sunset", "hourly": HOURLY})
             url = "https://api.open-meteo.com/v1/forecast?" + q
-            with urllib.request.urlopen(url, timeout=60) as r:
-                (DATA / f"{mkey}_{skey}.json").write_bytes(r.read())
+            (DATA / f"{mkey}_{skey}.json").write_bytes(_download(url))
             print("fetched", mkey, skey)
     fetch_week()
     fetch_carta()
@@ -82,8 +95,7 @@ def fetch_week():
             "latitude": lat, "longitude": lon, "timezone": "America/Santiago",
             "forecast_days": 7, "models": "gfs_seamless",
             "hourly": "temperature_2m,cloud_cover,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m"})
-        with urllib.request.urlopen("https://api.open-meteo.com/v1/forecast?" + q, timeout=60) as r:
-            (DATA / f"week_{skey}.json").write_bytes(r.read())
+        (DATA / f"week_{skey}.json").write_bytes(_download("https://api.open-meteo.com/v1/forecast?" + q))
         print("fetched week", skey)
 
 
