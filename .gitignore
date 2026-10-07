@@ -1,0 +1,5 @@
+__pycache__/
+_site/
+data/*.json
+data/carta_raw.jpg
+.DS_Store
